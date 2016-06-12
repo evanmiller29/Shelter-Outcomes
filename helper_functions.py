@@ -30,18 +30,32 @@ def data_import(df1, df2):
 
     df['mix'] = df.breed.apply(get_mix)
     
-    
-    def calc_age_in_years(x):
-        x = str(x)
-        if x == 'nan': return np.nan
-        age = int(x.split()[0])
-        if x.find('year') > -1: return age 
-        if x.find('month')> -1: return age / 12.
-        if x.find('week')> -1: return age / 52.
-        if x.find('day')> -1: return age / 365.
-        else: return np.nan
-    
-    df['ageinyears'] = df.ageuponoutcome.apply(calc_age_in_years)
+	# Generating variables that seem to be outliers for adoption/euthanasia
+	
+    def find_breed(x, breed):
+        if x.find(breed) >= 0: return 1
+        return 0
+	
+	df['pitbull'] = df.breed.apply(lambda x: find_breed(x, 'Pit Bull'))
+	df['rottweiler'] = df.breed.apply(lambda x: find_breed(x, 'Rottweiler'))
+	df['shorthair'] = df.breed.apply(lambda x: find_breed(x, 'Shorthair'))
+	df['shihtsu'] = df.breed.apply(lambda x: find_breed(x, 'Shih'))
+	
+    def agetodays(x):
+        try:
+            y = x.split()
+        except:
+            return np.nan 
+        if 'year' in y[1]:
+            return float(y[0]) * 365
+        elif 'month' in y[1]:
+            return float(y[0]) * (365/12)
+        elif 'week' in y[1]:
+            return float(y[0]) * 7
+        elif 'day' in y[1]:
+            return float(y[0])
+        
+    df['ageindays'] = df['ageuponoutcome'].map(agetodays)
     
     # Creating some more date variables
 
@@ -69,13 +83,7 @@ def data_import(df1, df2):
 
     df['color_simple'] = df.color.str.split('/| ').str.get(0)
     df.drop(['breed', 'color'], axis = 1 , inplace = True)
-    
-    # Using mean imputation of missing values. Can build on if necessary
-    
-    df['ageinyears'] = df.ageinyears.fillna(df.ageinyears.mean())
-    
-    # Just using training data for model building
-    
+          
     return(df)
     
 def prep_data(dataframe, type):
@@ -110,14 +118,7 @@ def prep_data(dataframe, type):
     X = pd.get_dummies(X)
     
     X_cols = X.columns
-    from sklearn.preprocessing import Imputer
-
-    #Imputing missing values
-    imp = Imputer(missing_values=np.nan, strategy='mean', axis=0)
-    imp.fit(X)
-
-    X = imp.transform(X)
-    
+       
     return(X, y, le, X_cols)
 
 def col_check(train_cols, test_cols):
